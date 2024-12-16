@@ -1,0 +1,29 @@
+keybindings:
+  global:
+    click:
+      <q>: Quit
+      <s>: SwitchPage
+      <j>: ScheduleIncrement
+      <k>: ScheduleDecrement
+      <l>: ToggleShowHelp
+      </>: EnterInsert
+      <Ctrl-d>: Quit
+      <Ctrl-c>: Quit
+      <Ctrl-z>: Suspend
+  pages:
+    Home:
+      click:
+        <k>: Up
+        <j>: Down
+      hold:
+    Game:
+      click:
+      hold:
+        <h>: Left
+        <l>: Right
+        <k>: Up
+        <j>: Down
+    Card:
+      click:
+        <Enter>: Next
+      hold:
