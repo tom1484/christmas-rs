@@ -1,15 +1,33 @@
+use std::collections::HashMap;
+
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::{layout::Rect, Frame};
+use serde::Deserialize;
 use tokio::sync::mpsc::UnboundedSender;
+use strum::Display;
 
-use crate::{action::Action, config::Config, tui::Event};
+use crate::{
+    action::Action,
+    config::{Config, PageKeyBindings},
+    tui::Event,
+};
 
 pub mod game;
-pub mod title;
+pub mod home;
 
-//// ANCHOR: page
+#[derive(Debug, Deserialize, Hash, Eq, PartialEq, Clone, Display)]
+pub enum PageId {
+    Home,
+    Game,
+    Card,
+}
+
 pub trait Page {
+    fn id(&self) -> PageId;
+
+    fn register_keymap(&mut self, keymaps: &HashMap<PageId, PageKeyBindings>) -> Result<()>;
+
     #[allow(unused_variables)]
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         Ok(())
@@ -29,18 +47,20 @@ pub trait Page {
         };
         Ok(r)
     }
+
     #[allow(unused_variables)]
     fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         Ok(None)
     }
+
     #[allow(unused_variables)]
     fn handle_mouse_events(&mut self, mouse: MouseEvent) -> Result<Option<Action>> {
         Ok(None)
     }
+
     #[allow(unused_variables)]
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         Ok(None)
     }
     fn draw(&mut self, f: &mut Frame<'_>, rect: Rect) -> Result<()>;
 }
-//// ANCHOR_END: page

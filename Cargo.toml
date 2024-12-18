@@ -37,3 +37,4 @@ tracing-subscriber = { version = "0.3.19", features = ["serde", "env-filter"] }
 tokio-util = "0.7.13"
 serde_yaml = "0.9.34"
 serde_plain = "1.0.2"
+derive_builder = "0.20.2"

@@ -2,11 +2,11 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
-// ANCHOR: all
 pub mod action;
 pub mod app;
-pub mod pages;
+pub mod components;
 pub mod config;
+pub mod pages;
 pub mod tui;
 pub mod utils;
 

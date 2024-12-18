@@ -3,10 +3,7 @@ keybindings:
     click:
       <q>: Quit
       <s>: SwitchPage
-      <j>: ScheduleIncrement
-      <k>: ScheduleDecrement
-      <l>: ToggleShowHelp
-      </>: EnterInsert
+      <?>: ToggleShowHelp
       <Ctrl-d>: Quit
       <Ctrl-c>: Quit
       <Ctrl-z>: Suspend

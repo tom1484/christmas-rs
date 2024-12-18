@@ -7,7 +7,6 @@ use tracing::error;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{self, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, Layer};
 
-
 lazy_static! {
     pub static ref PROJECT_NAME: String = env!("CARGO_CRATE_NAME").to_uppercase().to_string();
     pub static ref DATA_FOLDER: Option<PathBuf> =
@@ -134,4 +133,3 @@ macro_rules! trace_dbg {
         trace_dbg!(level: tracing::Level::DEBUG, $ex)
     };
 }
-

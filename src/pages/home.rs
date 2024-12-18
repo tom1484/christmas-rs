@@ -23,7 +23,7 @@ pub enum Mode {
 }
 
 #[derive(Default)]
-pub struct GamePage {
+pub struct HomePage {
     pub show_help: bool,
     pub counter: usize,
     pub app_ticker: usize,
@@ -34,7 +34,7 @@ pub struct GamePage {
     pub keymap: PageKeyBindings,
 }
 
-impl GamePage {
+impl HomePage {
     pub fn new() -> Self {
         Self::default()
     }
@@ -50,9 +50,9 @@ impl GamePage {
     }
 }
 
-impl Page for GamePage {
+impl Page for HomePage {
     fn id(&self) -> PageId {
-        PageId::Game
+        PageId::Home
     }
 
     fn register_keymap(&mut self, keymaps: &HashMap<PageId, PageKeyBindings>) -> Result<()> {
@@ -68,6 +68,7 @@ impl Page for GamePage {
     }
 
     fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+        // TODO: Handle keymap
         // let command = match self.mode {
         // };
         // Ok(Some(act!(command)))
@@ -112,34 +113,34 @@ impl Page for GamePage {
             ))
         }
 
-        if self.show_help {
-            let rect = rect.inner(Margin { horizontal: 4, vertical: 2 });
-            f.render_widget(Clear, rect);
-            let block = Block::default()
-                .title(Line::from(vec![Span::styled("Key Bindings", Style::default().add_modifier(Modifier::BOLD))]))
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Yellow));
-            f.render_widget(block, rect);
-            let rows = vec![
-                Row::new(vec!["j", "Increment"]),
-                Row::new(vec!["k", "Decrement"]),
-                Row::new(vec!["/", "Enter Input"]),
-                Row::new(vec!["ESC", "Exit Input"]),
-                Row::new(vec!["Enter", "Submit Input"]),
-                Row::new(vec!["q", "Quit"]),
-                Row::new(vec!["?", "Open Help"]),
-            ];
-            let widths = vec![Constraint::Percentage(100); rows.len()];
-            let table = Table::new(rows, widths)
-                .header(
-                    Row::new(vec!["Key", "Action"])
-                        .bottom_margin(1)
-                        .style(Style::default().add_modifier(Modifier::BOLD)),
-                )
-                .widths(&[Constraint::Percentage(10), Constraint::Percentage(90)])
-                .column_spacing(1);
-            f.render_widget(table, rect.inner(Margin { vertical: 4, horizontal: 2 }));
-        };
+        // if self.show_help {
+        //     let rect = rect.inner(Margin { horizontal: 4, vertical: 2 });
+        //     f.render_widget(Clear, rect);
+        //     let block = Block::default()
+        //         .title(Line::from(vec![Span::styled("Key Bindings", Style::default().add_modifier(Modifier::BOLD))]))
+        //         .borders(Borders::ALL)
+        //         .border_style(Style::default().fg(Color::Yellow));
+        //     f.render_widget(block, rect);
+        //     let rows = vec![
+        //         Row::new(vec!["j", "Increment"]),
+        //         Row::new(vec!["k", "Decrement"]),
+        //         Row::new(vec!["/", "Enter Input"]),
+        //         Row::new(vec!["ESC", "Exit Input"]),
+        //         Row::new(vec!["Enter", "Submit Input"]),
+        //         Row::new(vec!["q", "Quit"]),
+        //         Row::new(vec!["?", "Open Help"]),
+        //     ];
+        //     let widths = vec![Constraint::Percentage(100); rows.len()];
+        //     let table = Table::new(rows, widths)
+        //         .header(
+        //             Row::new(vec!["Key", "Action"])
+        //                 .bottom_margin(1)
+        //                 .style(Style::default().add_modifier(Modifier::BOLD)),
+        //         )
+        //         .widths(&[Constraint::Percentage(10), Constraint::Percentage(90)])
+        //         .column_spacing(1);
+        //     f.render_widget(table, rect.inner(Margin { vertical: 4, horizontal: 2 }));
+        // };
 
         Ok(())
     }

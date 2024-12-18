@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, path::PathBuf};
+use std::{collections::HashMap, fmt, fmt::Debug, path::PathBuf};
 
 use color_eyre::eyre::Result;
 use config::Value;
@@ -12,16 +12,17 @@ use serde::{
 use serde_json::Value as JsonValue;
 
 use crate::{
-    action::{Action, CardAction, GameAction, HomeAction},
+    action::{self, Action, ActionState, CardAction, Command, GameAction, HomeAction},
     app::Mode,
+    pages::{game, home, Page, PageId},
 };
 
 const CONFIG: &str = include_str!("../.config/config.yaml");
 
 parse_and_map_actions![
-    ("Home", HomeAction, Action::Home),
-    ("Game", GameAction, Action::Game),
-    ("Card", CardAction, Action::Card)
+    (PageId::Home, HomeAction, Command::Home),
+    (PageId::Game, GameAction, Command::Game),
+    (PageId::Card, CardAction, Command::Card)
 ];
 
 #[derive(Clone, Debug, Deserialize, Default)]
@@ -38,55 +39,42 @@ pub struct Config {
     pub config: AppConfig,
     #[serde(default)]
     pub keybindings: KeyBindings,
-    #[serde(default)]
-    pub styles: Styles,
 }
 
 impl Config {
     pub fn new() -> Result<Self, config::ConfigError> {
         let default_config: Config = serde_yaml::from_str(CONFIG).unwrap();
-        Ok(default_config)
-        // let default_config: Config = json5::from_str(CONFIG).unwrap();
-        // let data_dir = crate::utils::get_data_dir();
-        // let config_dir = crate::utils::get_config_dir();
-        // let mut builder = config::Config::builder()
-        //     .set_default("_data_dir", data_dir.to_str().unwrap())?
-        //     .set_default("_config_dir", config_dir.to_str().unwrap())?;
+        let data_dir = crate::utils::get_data_dir();
+        let config_dir = crate::utils::get_config_dir();
+        let mut builder = config::Config::builder()
+            .set_default("_data_dir", data_dir.to_str().unwrap())?
+            .set_default("_config_dir", config_dir.to_str().unwrap())?;
 
-        // let config_files = [
-        //     ("config.json5", config::FileFormat::Json5),
-        //     ("config.json", config::FileFormat::Json),
-        //     ("config.yaml", config::FileFormat::Yaml),
-        //     ("config.toml", config::FileFormat::Toml),
-        //     ("config.ini", config::FileFormat::Ini),
-        // ];
-        // let mut found_config = false;
-        // for (file, format) in &config_files {
-        //     builder = builder.add_source(config::File::from(config_dir.join(file)).format(*format).required(false));
-        //     if config_dir.join(file).exists() {
-        //         found_config = true
-        //     }
-        // }
-        // if !found_config {
-        //     log::error!("No configuration file found. Application may not behave as expected");
-        // }
+        let config_files = [("config.yaml", config::FileFormat::Yaml)];
+        let mut found_config = false;
+        for (file, format) in &config_files {
+            builder = builder.add_source(config::File::from(config_dir.join(file)).format(*format).required(false));
+            if config_dir.join(file).exists() {
+                found_config = true
+            }
+        }
+        if !found_config {
+            log::error!("No configuration file found. Application may not behave as expected");
+        }
 
-        // let mut cfg: Self = builder.build()?.try_deserialize()?;
+        let mut cfg: Self = builder.build()?.try_deserialize()?;
+        for (scope, default_bindings) in default_config.keybindings.pages.iter() {
+            let user_bindings = cfg.keybindings.pages.entry(scope.clone()).or_default();
+            for (key, cmd) in default_bindings.0.iter() {
+                user_bindings.0.entry(key.clone()).or_insert_with(|| cmd.clone());
+            }
+        }
+        let user_bindings = &mut cfg.keybindings.global;
+        for (key, cmd) in default_config.keybindings.global.0.iter() {
+            user_bindings.0.entry(key.clone()).or_insert_with(|| cmd.clone());
+        }
 
-        // for (mode, default_bindings) in default_config.keybindings.iter() {
-        //     let user_bindings = cfg.keybindings.entry(*mode).or_default();
-        //     for (key, cmd) in default_bindings.iter() {
-        //         user_bindings.entry(key.clone()).or_insert_with(|| cmd.clone());
-        //     }
-        // }
-        // for (mode, default_styles) in default_config.styles.iter() {
-        //     let user_styles = cfg.styles.entry(*mode).or_default();
-        //     for (style_key, style) in default_styles.iter() {
-        //         user_styles.entry(style_key.clone()).or_insert_with(|| style.clone());
-        //     }
-        // }
-
-        // Ok(cfg)
+        Ok(cfg)
     }
 }
 
@@ -103,12 +91,12 @@ struct _RawKeyBindings {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct PageKeyBindings(HashMap<KeyEvent, Action>);
+pub struct PageKeyBindings(pub HashMap<KeyEvent, Action>);
 
 #[derive(Clone, Debug, Default)]
 pub struct KeyBindings {
     pub global: PageKeyBindings,
-    pub pages: HashMap<String, PageKeyBindings>,
+    pub pages: HashMap<PageId, PageKeyBindings>,
 }
 
 impl<'de> Deserialize<'de> for KeyBindings {
@@ -118,11 +106,16 @@ impl<'de> Deserialize<'de> for KeyBindings {
     {
         let raw_keybindings: _RawKeyBindings = _RawKeyBindings::deserialize(deserializer)?;
 
-        let global_keybindings = parse_keybindings("global", raw_keybindings.global);
+        let global_keybindings = PageKeyBindings(
+            parse_global_keybindings(raw_keybindings.global)
+                .into_iter()
+                .map(|(event, (command, state))| (event, Action { command, state }))
+                .collect(),
+        );
         let page_keybindings = raw_keybindings
             .pages
             .into_iter()
-            .map(|(page, keybindings)| (page.clone(), parse_keybindings(&page, keybindings)))
+            .map(|(page, keybindings)| match_page_keybindings(&page, keybindings))
             .collect();
 
         Ok(KeyBindings { global: global_keybindings, pages: page_keybindings })
@@ -131,81 +124,48 @@ impl<'de> Deserialize<'de> for KeyBindings {
 
 #[macro_export]
 macro_rules! parse_and_map_actions {
-    ( $( ( $action_str:expr, $action_type:ty, $action_variant:path ) ),* ) => {
-        fn parse_keybindings(page: &str, raw_page_keybindings: _RawPageKeyBindings) -> PageKeyBindings {
-            if page == "global" {
-                parse_global_keybindings(raw_page_keybindings)
-            } else {
-                let map = match page {
-                    $(
-                        $action_str => parse_page_keybindings::<$action_type>(&raw_page_keybindings)
-                                    .into_iter()
-                                    .map(|(key_event, action)| (key_event, $action_variant(action)))
-                                    .collect(),
-                    )*
-                    _ => HashMap::new(),
-                };
+    ( $( ( $page_id_variant:path, $action_type:ty, $action_variant:path ) ),* ) => {
+        fn match_page_keybindings(page: &str, raw_page_keybindings: _RawPageKeyBindings) -> (PageId, PageKeyBindings) {
+            let page_id: PageId = serde_yaml::from_str(page).unwrap();
+            let map = match page_id {
+                $(
+                    $page_id_variant => {
+                        parse_page_keybindings::<$action_type>(&raw_page_keybindings)
+                            .into_iter()
+                            .map(|(event, (command, state))| (event, Action{command: $action_variant(command), state}))
+                            .collect()
+                    },
+                )*
+            };
 
-                PageKeyBindings(map)
-            }
+            (page_id, PageKeyBindings(map))
         }
     };
 }
 
 use parse_and_map_actions;
 
-// macro_rules! parse_and_map_actions {
-//     ($action_type:ty, $action_variant:path, $raw_keybindings:expr) => {
-//         parse_page_keybindings::<$action_type>(&$raw_keybindings)
-//             .into_iter()
-//             .map(|(key_event, action)| (key_event, $action_variant(action)))
-//             .collect()
-//     };
-// }
-
-// fn parse_keybindings(page: &str, raw_page_keybindings: _RawPageKeyBindings) -> PageKeyBindings {
-//     if page == "global" {
-//         parse_global_keybindings(raw_page_keybindings)
-//     } else {
-//         let map = match page {
-//             "Game" => parse_and_map_actions!(GameAction, Action::Game, raw_page_keybindings),
-//             _ => HashMap::new(),
-//         };
-
-//         PageKeyBindings(map)
-//     }
-// }
-
-fn parse_global_keybindings(raw_keybindings: _RawPageKeyBindings) -> PageKeyBindings {
-    let extract = |map: &Option<HashMap<String, String>>| {
-        if let Some(inner_map) = &raw_keybindings.click {
-            inner_map
-                .iter()
-                .map(|(key_str, action_str)| {
-                    let action: Action = serde_yaml::from_str(action_str).unwrap();
-                    (parse_key_event(key_str).unwrap(), action)
-                })
-                .collect()
-        } else {
-            HashMap::new()
-        }
-    };
-
-    let keybindings = extract(&raw_keybindings.click);
-    let hold_keybindings = extract(&raw_keybindings.hold);
-
-    PageKeyBindings(merge_keybinding_maps(keybindings, hold_keybindings))
+fn parse_binding_pairs(map: &Option<HashMap<String, String>>) -> HashMap<KeyEvent, Command> {
+    if let Some(inner_map) = map {
+        inner_map
+            .iter()
+            .map(|(key_str, action_str)| {
+                let action: Command = serde_yaml::from_str(action_str).unwrap();
+                (parse_key_event(key_str).unwrap(), action)
+            })
+            .collect()
+    } else {
+        HashMap::new()
+    }
 }
 
-fn parse_page_keybindings<'de, T: Deserialize<'de> + Clone>(
-    raw_page_keybindings: &'de _RawPageKeyBindings,
-) -> HashMap<KeyEvent, T> {
+fn parse_global_keybindings(raw_keybindings: _RawPageKeyBindings) -> HashMap<KeyEvent, (Command, ActionState)> {
     let extract = |map: &Option<HashMap<String, String>>| {
-        if let Some(inner_map) = &raw_page_keybindings.click {
+        if let Some(inner_map) = map {
             inner_map
                 .iter()
                 .map(|(key_str, action_str)| {
-                    let action: T = serde_yaml::from_str(action_str).unwrap();
+                    let action: Command = serde_yaml::from_str(action_str).unwrap();
                     (parse_key_event(key_str).unwrap(), action)
                 })
                 .collect()
@@ -214,22 +174,48 @@ fn parse_page_keybindings<'de, T: Deserialize<'de> + Clone>(
         }
     };
 
-    let keybindings = extract(&raw_page_keybindings.click);
-    let hold_keybindings = extract(&raw_page_keybindings.hold);
+    let keybindings = parse_binding_pairs(&raw_keybindings.click);
+    let hold_keybindings = parse_binding_pairs(&raw_keybindings.hold);
 
     merge_keybinding_maps(keybindings, hold_keybindings)
 }
 
+fn parse_page_keybindings<'de, T>(raw_page_keybindings: &'de _RawPageKeyBindings) -> HashMap<KeyEvent, (T, ActionState)>
+where
+    T: Deserialize<'de> + Clone + Debug,
+{
+    let extract = |map: &'de Option<HashMap<String, String>>| {
+        if let Some(inner_map) = map {
+            inner_map
+                .iter()
+                .map(|(key_str, action_str)| {
+                    let action: T = serde_yaml::from_str(&action_str).unwrap();
+                    (parse_key_event(key_str).unwrap(), action)
+                })
+                .collect()
+        } else {
+            HashMap::new()
+        }
+    };
+
+    let click_keybindings = extract(&raw_page_keybindings.click);
+    let hold_keybindings = extract(&raw_page_keybindings.hold);
+
+    merge_keybinding_maps(click_keybindings, hold_keybindings)
+}
+
 fn merge_keybinding_maps<A: Clone>(
-    mut click: HashMap<KeyEvent, A>,
+    click: HashMap<KeyEvent, A>,
     hold: HashMap<KeyEvent, A>,
-) -> HashMap<KeyEvent, A> {
+) -> HashMap<KeyEvent, (A, ActionState)> {
+    let mut click: HashMap<KeyEvent, (A, ActionState)> =
+        click.into_iter().map(|(event, command)| (event, (command, ActionState::default()))).collect();
     for (mut key_event, action) in hold {
-        click.insert(key_event.clone(), action.clone());
+        click.insert(key_event.clone(), (action.clone(), ActionState::Start));
         key_event.kind = KeyEventKind::Release;
-        click.insert(key_event.clone(), action.clone());
+        click.insert(key_event.clone(), (action.clone(), ActionState::End));
         key_event.kind = KeyEventKind::Repeat;
-        click.insert(key_event.clone(), action.clone());
+        click.insert(key_event.clone(), (action.clone(), ActionState::Repeat));
     }
 
     click
@@ -328,30 +314,30 @@ fn parse_key_code_with_modifiers(raw: &str, mut modifiers: KeyModifiers) -> Resu
 pub fn key_event_to_string(key_event: &KeyEvent) -> String {
     let char;
     let key_code = match key_event.code {
-        KeyCode::Backspace => "backspace",
-        KeyCode::Enter => "enter",
-        KeyCode::Left => "left",
-        KeyCode::Right => "right",
-        KeyCode::Up => "up",
-        KeyCode::Down => "down",
-        KeyCode::Home => "home",
-        KeyCode::End => "end",
-        KeyCode::PageUp => "pageup",
-        KeyCode::PageDown => "pagedown",
-        KeyCode::Tab => "tab",
-        KeyCode::BackTab => "backtab",
-        KeyCode::Delete => "delete",
-        KeyCode::Insert => "insert",
+        KeyCode::Backspace => "Backspace",
+        KeyCode::Enter => "Enter",
+        KeyCode::Left => "Left",
+        KeyCode::Right => "Right",
+        KeyCode::Up => "Up",
+        KeyCode::Down => "Down",
+        KeyCode::Home => "Home",
+        KeyCode::End => "End",
+        KeyCode::PageUp => "PageUp",
+        KeyCode::PageDown => "PageDown",
+        KeyCode::Tab => "Tab",
+        KeyCode::BackTab => "BackTab",
+        KeyCode::Delete => "Delete",
+        KeyCode::Insert => "Insert",
         KeyCode::F(c) => {
-            char = format!("f({c})");
+            char = format!("F({c})");
             &char
         },
-        KeyCode::Char(c) if c == ' ' => "space",
+        KeyCode::Char(c) if c == ' ' => "Space",
         KeyCode::Char(c) => {
             char = c.to_string();
             &char
         },
-        KeyCode::Esc => "esc",
+        KeyCode::Esc => "Esc",
         KeyCode::Null => "",
         KeyCode::CapsLock => "",
         KeyCode::Menu => "",
@@ -367,15 +353,15 @@ pub fn key_event_to_string(key_event: &KeyEvent) -> String {
     let mut modifiers = Vec::with_capacity(3);
 
     if key_event.modifiers.intersects(KeyModifiers::CONTROL) {
-        modifiers.push("ctrl");
+        modifiers.push("Ctrl");
     }
 
     if key_event.modifiers.intersects(KeyModifiers::SHIFT) {
-        modifiers.push("shift");
+        modifiers.push("Shift");
     }
 
     if key_event.modifiers.intersects(KeyModifiers::ALT) {
-        modifiers.push("alt");
+        modifiers.push("Alt");
     }
 
     let mut key = modifiers.join("-");
@@ -561,7 +547,7 @@ mod tests {
     #[test]
     fn test_config() -> Result<()> {
         let c = Config::new()?;
-        println!("{c:?}");
+        println!("{:?}", c.keybindings.pages.get(&PageId::Home));
         // assert_eq!(
         //     c.keybindings.pages.get("Game").unwrap().0.get(&parse_key_event("<b>").unwrap()).unwrap(),
         //     &Action::Game(GameAction::Right)
