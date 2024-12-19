@@ -18,6 +18,9 @@ use crate::{
 #[derive(Debug)]
 pub struct Help {
     keybinding_groups: Vec<(String, Vec<(String, String)>)>,
+    column_spacing: u16,
+    margin_vertical: u16,
+    margin_horizantal: u16,
 }
 
 impl Help {
@@ -36,7 +39,7 @@ impl Help {
             })
             .collect();
 
-        Self { keybinding_groups: groups }
+        Self { keybinding_groups: groups, column_spacing: 5, margin_vertical: 1, margin_horizantal: 2 }
     }
 
     fn render_group(
@@ -63,7 +66,7 @@ impl Help {
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(Style::new().bold().fg(Color::Cyan))
-                    .padding(ratatui::widgets::Padding::symmetric(2, 1))
+                    .padding(ratatui::widgets::Padding::symmetric(2, 1)),
             );
 
         Clear::default().render(area, buf);
@@ -91,13 +94,16 @@ impl Widget for Help {
             .max()
             .unwrap_or(0) as u16;
 
-        let width = key_length + val_length + 5 + (2 * 2) + (1 * 2);
+        // + column_spacing + margin*2 + border 
+        let width = key_length + val_length + self.column_spacing + (self.margin_horizantal * 2) + 2;
         // let width = key_length + val_length;
         let heights: Vec<u16> = group_keybindings
             .iter()
             .map(|keybindings| {
-                let height = keybindings.len() + 6;
-                height as u16
+                let len = keybindings.len() as u16;
+                // + margin*2 + header + border
+                let height = len + (self.margin_vertical * 2) + 2 + 2;
+                height
             })
             .collect();
 

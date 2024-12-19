@@ -144,8 +144,10 @@ impl App {
                     },
                     _ => {},
                 }
-                if let Some(action) = self.get_active_page().update(action)? {
-                    action_tx.send(action)?
+                if !self.show_help {
+                    if let Some(action) = self.get_active_page().update(action)? {
+                        action_tx.send(action)?
+                    }
                 }
             }
             if self.should_suspend {
@@ -194,76 +196,6 @@ impl App {
         ]);
 
         f.render_widget(help, rect);
-        // let draw_table = |title: Line| {
-        //     let block = Block::default()
-        //         .title(Line::from(vec![Span::styled("Key Bindings", Style::default().add_modifier(Modifier::BOLD))]))
-        //         .title_alignment(Alignment::Left)
-        //         .borders(Borders::ALL)
-        //         .border_type(BorderType::Rounded)
-        //         .border_style(Style::default().fg(Color::Yellow));
-
-        //     let helps = vec![
-        //         ("j", "Increment"),
-        //         ("k", "Decrement"),
-        //         ("/", "Enter Input"),
-        //         ("ESC", "Exit Input"),
-        //         ("Enter", "Submit Input"),
-        //         ("q", "Quit"),
-        //         ("?", "Open Help"),
-        //     ];
-
-        //     let rows = helps.iter().map(|help| Row::new(vec![help.0, help.1])).collect::<Vec<_>>();
-
-        //     let max_key_width = helps.iter().map(|help| help.0.len()).max().unwrap_or(0) as u16;
-        //     let max_action_width = helps.iter().map(|help| help.1.len()).max().unwrap_or(0) as u16;
-        //     let key_ratio = (100 * max_key_width) / (max_key_width + max_action_width);
-        //     let action_ratio = (100 * max_action_width) / (max_key_width + max_action_width);
-        //     // let min_width = max_key_width + max_action_width;
-
-        //     let table = Table::new(rows, vec![Constraint::Percentage(key_ratio), Constraint::Percentage(action_ratio)])
-        //     .header(
-        //         Row::new(vec!["Key", "Action"]).bottom_margin(1).style(Style::default().add_modifier(Modifier::BOLD)),
-        //     )
-        //     // .widths(&[Constraint::Min(max_key_width), Constraint::Min(max_action_width)])
-        //     .column_spacing(1);
-
-        //     // Create a layout to split the rect for the table
-        //     let rect = Layout::default()
-        //     .direction(Direction::Vertical)
-        //     // .constraints([Constraint::Fill(1), Constraint::Min(table_height), Constraint::Fill(1)])
-        //     .constraints([Constraint::Fill(1), Constraint::Percentage(50), Constraint::Fill(1)])
-        //     .split(rect)[1];
-        //     let rect = Layout::default()
-        //     .direction(Direction::Horizontal)
-        //     // .constraints([Constraint::Fill(1), Constraint::Min(min_width), Constraint::Fill(1)])
-        //     .constraints([Constraint::Fill(1), Constraint::Percentage(40), Constraint::Fill(1)])
-        //     .split(rect)[1];
-
-        //     f.render_widget(block, rect);
-        //     f.render_widget(table, rect.inner(Margin { vertical: 2, horizontal: 2 }));
-        // };
-
-        // let block = Block::default()
-        //     .title(Line::from(vec![Span::styled("Key Bindings", Style::default().add_modifier(Modifier::BOLD))]))
-        //     .title_alignment(Alignment::Center)
-        //     .borders(Borders::ALL)
-        //     .border_type(BorderType::Rounded)
-        //     .border_style(Style::default().fg(Color::Yellow));
-
-        // // Create a layout to split the rect for the table
-        // let rect = Layout::default()
-        //     .direction(Direction::Vertical)
-        //     // .constraints([Constraint::Fill(1), Constraint::Min(table_height), Constraint::Fill(1)])
-        //     .constraints([Constraint::Fill(1), Constraint::Percentage(50), Constraint::Fill(1)])
-        //     .split(rect)[1];
-        // let main_area = Layout::default()
-        //     .direction(Direction::Horizontal)
-        //     // .constraints([Constraint::Fill(1), Constraint::Min(min_width), Constraint::Fill(1)])
-        //     .constraints([Constraint::Fill(1), Constraint::Percentage(40), Constraint::Fill(1)])
-        //     .split(rect)[1];
-
-        // f.render_widget(Clear, main_area);
-        // f.render_widget(block, main_area);
 
         Ok(())
     }

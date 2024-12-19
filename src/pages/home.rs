@@ -2,6 +2,7 @@ use std::{collections::HashMap, time::Duration};
 
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
+use derive_builder::Builder;
 use log::error;
 use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
@@ -10,43 +11,45 @@ use tui_input::{backend::crossterm::EventHandler, Input};
 
 use super::{Frame, Page, PageId};
 use crate::{
-    action::{act, Action, ActionState, Command},
+    action::{act, Action, ActionState, Command, HomeAction},
     config::{key_event_to_string, PageKeyBindings},
+    constants::TITLE_TEXT,
 };
 
-#[derive(Default, Copy, Clone, PartialEq, Eq)]
-pub enum Mode {
-    #[default]
-    Normal,
-    Insert,
-    Processing,
+#[derive(Copy, Clone, PartialEq, Eq)]
+enum OptionItem {
+    Start,
 }
 
-#[derive(Default)]
+#[derive(Builder)]
 pub struct HomePage {
-    pub show_help: bool,
-    pub counter: usize,
-    pub app_ticker: usize,
-    pub render_ticker: usize,
-    pub mode: Mode,
-    pub input: Input,
+    #[builder(default)]
     pub action_tx: Option<UnboundedSender<Action>>,
+    #[builder(default)]
     pub keymap: PageKeyBindings,
+    options: Vec<(OptionItem, &'static str)>,
+    selected_option_index: usize,
 }
 
 impl HomePage {
     pub fn new() -> Self {
-        Self::default()
+        HomePageBuilder::default()
+            .options(vec![(OptionItem::Start, "Start playing"), (OptionItem::Start, "Start playing")])
+            .selected_option_index(0)
+            .build()
+            .unwrap()
     }
 
-    pub fn tick(&mut self) {
-        log::info!("Tick");
-        self.app_ticker = self.app_ticker.saturating_add(1);
+    pub fn up(&mut self) {
+        if self.selected_option_index < self.options.len() - 1 {
+            self.selected_option_index += 1;
+        }
     }
 
-    pub fn render_tick(&mut self) {
-        log::debug!("Render Tick");
-        self.render_ticker = self.render_ticker.saturating_add(1);
+    pub fn down(&mut self) {
+        if self.selected_option_index > 0 {
+            self.selected_option_index -= 1;
+        }
     }
 }
 
@@ -69,78 +72,85 @@ impl Page for HomePage {
 
     fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         // TODO: Handle keymap
-        // let command = match self.mode {
-        // };
-        // Ok(Some(act!(command)))
         Ok(None)
     }
 
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        match action.command {
-            Command::Tick => self.tick(),
-            Command::Render => self.render_tick(),
-            Command::ToggleShowHelp => self.show_help = !self.show_help,
-            _ => (),
+        if let Command::Home(command) = action.command {
+            match command {
+                HomeAction::Up => self.up(),
+                HomeAction::Down => self.down(),
+            }
         }
         Ok(None)
     }
 
     fn draw(&mut self, f: &mut Frame<'_>, rect: Rect) -> Result<()> {
-        let rects =
-            Layout::default().constraints([Constraint::Percentage(100), Constraint::Min(3)].as_ref()).split(rect);
+        f.render_widget(Clear, rect);
 
-        let width = rects[1].width.max(3) - 3; // keep 2 for borders and 1 for cursor
-        let scroll = self.input.visual_scroll(width as usize);
-        let input = Paragraph::new(self.input.value())
-            .style(match self.mode {
-                Mode::Insert => Style::default().fg(Color::Yellow),
-                _ => Style::default(),
+        let title_lines: Vec<&str> = TITLE_TEXT.lines().filter(|s| s.len() != 0).collect();
+        let num_title_lines = title_lines.len() as u16;
+
+        let num_options = self.options.len() as u16;
+        let option_height = num_options * 2 - 1;
+
+        let [title_area, option_area] =
+            Layout::vertical(vec![Constraint::Length(num_title_lines), Constraint::Length(option_height)])
+                .flex(layout::Flex::SpaceAround)
+                .areas(rect);
+
+        // Draw title
+        let lines = title_lines.iter().map(|line| Line::from(*line)).collect::<Vec<_>>();
+        let paragraph = Paragraph::new(lines).style(Style::default().fg(Color::Red)).alignment(Alignment::Center);
+        f.render_widget(paragraph, title_area);
+
+        // Draw options
+        let option_titles = self.options.iter().map(|(_, title)| *title).collect::<Vec<_>>();
+        let max_option_len = option_titles.iter().map(|title| title.len()).max().unwrap_or(0) as u16;
+
+        // Pad option titles
+        let option_titles = option_titles
+            .into_iter()
+            .map(|title| {
+                let title = title.to_string();
+                let pad_len = max_option_len as usize - title.len();
+                let front_pad = vec![' '; 2].into_iter().collect::<String>();
+                let back_pad = vec![' '; pad_len + 2].into_iter().collect::<String>();
+                [front_pad, title, back_pad].into_iter().collect::<String>()
             })
-            .scroll((0, scroll as u16))
-            .block(Block::default().borders(Borders::ALL).title(Line::from(vec![
-                Span::raw("Enter Input Mode "),
-                Span::styled("(Press ", Style::default().fg(Color::DarkGray)),
-                Span::styled("/", Style::default().add_modifier(Modifier::BOLD).fg(Color::Gray)),
-                Span::styled(" to start, ", Style::default().fg(Color::DarkGray)),
-                Span::styled("ESC", Style::default().add_modifier(Modifier::BOLD).fg(Color::Gray)),
-                Span::styled(" to finish)", Style::default().fg(Color::DarkGray)),
-            ])));
-        f.render_widget(input, rects[1]);
-        if self.mode == Mode::Insert {
-            f.set_cursor_position((
-                (rects[1].x + 1 + self.input.cursor() as u16).min(rects[1].x + rects[1].width - 2),
-                rects[1].y + 1,
-            ))
-        }
+            .collect::<Vec<_>>();
 
-        // if self.show_help {
-        //     let rect = rect.inner(Margin { horizontal: 4, vertical: 2 });
-        //     f.render_widget(Clear, rect);
-        //     let block = Block::default()
-        //         .title(Line::from(vec![Span::styled("Key Bindings", Style::default().add_modifier(Modifier::BOLD))]))
-        //         .borders(Borders::ALL)
-        //         .border_style(Style::default().fg(Color::Yellow));
-        //     f.render_widget(block, rect);
-        //     let rows = vec![
-        //         Row::new(vec!["j", "Increment"]),
-        //         Row::new(vec!["k", "Decrement"]),
-        //         Row::new(vec!["/", "Enter Input"]),
-        //         Row::new(vec!["ESC", "Exit Input"]),
-        //         Row::new(vec!["Enter", "Submit Input"]),
-        //         Row::new(vec!["q", "Quit"]),
-        //         Row::new(vec!["?", "Open Help"]),
-        //     ];
-        //     let widths = vec![Constraint::Percentage(100); rows.len()];
-        //     let table = Table::new(rows, widths)
-        //         .header(
-        //             Row::new(vec!["Key", "Action"])
-        //                 .bottom_margin(1)
-        //                 .style(Style::default().add_modifier(Modifier::BOLD)),
-        //         )
-        //         .widths(&[Constraint::Percentage(10), Constraint::Percentage(90)])
-        //         .column_spacing(1);
-        //     f.render_widget(table, rect.inner(Margin { vertical: 4, horizontal: 2 }));
-        // };
+        let [option_area] = Layout::horizontal(vec![Constraint::Length(max_option_len + (2 * 2))])
+            .flex(layout::Flex::SpaceAround)
+            .areas(option_area);
+
+        let lines = option_titles
+            .iter()
+            .enumerate()
+            .map(|(index, title)| {
+                Line::from(title.as_str()).style({
+                    if index == self.selected_option_index {
+                        Style::default().bg(Color::Cyan)
+                    } else {
+                        Style::default()
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+        // Insert empty lines
+        let lines = {
+            let len = lines.len();
+            let mut new_lines = vec![];
+            for (index, line) in lines.into_iter().enumerate() {
+                new_lines.push(line);
+                if index < len - 1 {}
+                new_lines.push(Line::from(""));
+            }
+            new_lines
+        };
+
+        let paragraph = Paragraph::new(lines).style(Style::default().fg(Color::White)).alignment(Alignment::Left);
+        f.render_widget(paragraph, option_area);
 
         Ok(())
     }

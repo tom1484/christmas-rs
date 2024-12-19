@@ -2,13 +2,14 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
-pub mod action;
-pub mod app;
-pub mod components;
-pub mod config;
-pub mod pages;
-pub mod tui;
-pub mod utils;
+mod action;
+mod app;
+mod components;
+mod config;
+mod constants;
+mod pages;
+mod tui;
+mod utils;
 
 use color_eyre::eyre::Result;
 
@@ -22,7 +23,7 @@ async fn tokio_main() -> Result<()> {
 
     initialize_panic_handler()?;
 
-    let mut app = App::new(1.0, 60.0)?;
+    let mut app = App::new(60.0, 60.0)?;
     app.run().await?;
 
     Ok(())

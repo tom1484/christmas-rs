@@ -10,8 +10,8 @@ keybindings:
   pages:
     Home:
       click:
-        <k>: Up
-        <j>: Down
+        <k>: Down
+        <j>: Up
       hold:
     Game:
       click:
