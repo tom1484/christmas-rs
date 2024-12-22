@@ -67,7 +67,8 @@ impl Help {
                     .border_type(BorderType::Rounded)
                     .border_style(Style::new().bold().fg(Color::Cyan))
                     .padding(ratatui::widgets::Padding::symmetric(2, 1)),
-            );
+            )
+            .style(Style::default().bg(Color::Black));
 
         Clear::default().render(area, buf);
         table.render(area, buf);

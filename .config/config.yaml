@@ -2,7 +2,7 @@ keybindings:
   global:
     click:
       <q>: Quit
-      <s>: SwitchPage
+      # <s>: SwitchPage
       <?>: ToggleShowHelp
       <Ctrl-d>: Quit
       <Ctrl-c>: Quit
@@ -12,6 +12,7 @@ keybindings:
       click:
         <k>: Down
         <j>: Up
+        <Enter>: Select
       hold:
     Game:
       click:

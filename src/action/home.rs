@@ -10,4 +10,5 @@ use strum::Display;
 pub enum HomeAction {
     Up,
     Down,
+    Select,
 }

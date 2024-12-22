@@ -1,3 +1,5 @@
+pub mod tui;
+
 use std::path::PathBuf;
 
 use color_eyre::eyre::Result;

@@ -15,6 +15,7 @@ use crate::{
     action::{self, act, Action, ActionState, Command},
     components::help::Help,
     config::Config,
+    constants::{HEIGHT, WIDTH},
     pages::{game::GamePage, home::HomePage, Page, PageId},
     tui,
 };
@@ -142,7 +143,11 @@ impl App {
                     Command::Render => {
                         self.render(&mut tui, &action_tx)?;
                     },
-                    _ => {},
+                    Command::StartGame => {
+                        // WARNING: Testing
+                        self.should_quit = true;
+                    },
+                    _ => {}
                 }
                 if !self.show_help {
                     if let Some(action) = self.get_active_page().update(action)? {
@@ -168,17 +173,30 @@ impl App {
 
     fn render(&mut self, tui: &mut tui::Tui, action_tx: &UnboundedSender<Action>) -> Result<()> {
         tui.draw(|f| {
-            let rect = f.area();
+            let area = f.area();
+
+            let [_, area, _] =
+                Layout::vertical([Constraint::Fill(1), Constraint::Length(HEIGHT), Constraint::Fill(1)]).areas(area);
+            let [_, area, _] =
+                Layout::horizontal([Constraint::Fill(1), Constraint::Length(WIDTH), Constraint::Fill(1)]).areas(area);
+
+            let border = Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .style(Style::default().bg(Color::Black));
+            f.render_widget(border, area);
+
+            let drawable_area = area.inner(Margin { horizontal: 1, vertical: 1 });
 
             if let Some(page) = self.pages.get_mut(self.active_page_index) {
-                let r = page.draw(f, rect);
+                let r = page.draw(f, drawable_area);
                 if let Err(e) = r {
                     action_tx.send(act!(Command::Error(format!("Failed to draw: {:?}", e)))).unwrap();
                 }
             }
 
             if self.show_help {
-                let r = self.draw_help(f, rect);
+                let r = self.draw_help(f, drawable_area);
                 if let Err(e) = r {
                     action_tx.send(act!(Command::Error(format!("Failed to draw: {:?}", e)))).unwrap();
                 }

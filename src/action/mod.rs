@@ -52,7 +52,7 @@ pub enum Command {
     Error(String),
     Help,
     ToggleShowHelp,
-    SwitchPage,
+    StartGame,
     // Page actions
     Home(HomeAction),
     Game(GameAction),
