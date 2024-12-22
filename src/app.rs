@@ -13,7 +13,10 @@ use tokio::sync::mpsc::{self, UnboundedSender};
 
 use crate::{
     action::{self, act, Action, ActionState, Command},
-    components::help::Help,
+    components::{
+        background::{Background, BackgroundState},
+        help::Help,
+    },
     config::Config,
     constants::{HEIGHT, WIDTH},
     pages::{game::GamePage, home::HomePage, Page, PageId},
@@ -27,21 +30,20 @@ pub enum Mode {
 }
 
 pub struct App {
-    pub config: Config,
-    pub tick_rate: f64,
-    pub frame_rate: f64,
-    pub pages: Vec<Box<dyn Page>>,
-    pub active_page_index: usize,
-    pub should_quit: bool,
-    pub should_suspend: bool,
-    pub show_help: bool,
-    pub mode: Mode,
+    config: Config,
+    tick_rate: f64,
+    frame_rate: f64,
+    should_quit: bool,
+    should_suspend: bool,
+    show_help: bool,
+    pages: Vec<Box<dyn Page>>,
+    active_page_index: usize,
+    background_state: BackgroundState,
 }
 
 impl App {
     pub fn new(tick_rate: f64, frame_rate: f64) -> Result<Self> {
         let config = Config::new()?;
-        let mode = Mode::Home;
 
         let page_keybindings = &config.keybindings.pages;
         let home_page = HomePage::new();
@@ -50,13 +52,13 @@ impl App {
         Ok(Self {
             tick_rate,
             frame_rate,
-            pages: vec![Box::new(home_page), Box::new(game_page)],
-            active_page_index: 0,
             should_quit: false,
             should_suspend: false,
             show_help: false,
             config,
-            mode,
+            pages: vec![Box::new(home_page), Box::new(game_page)],
+            active_page_index: 0,
+            background_state: BackgroundState::new(2.0, 1.0 / 30.0),
         })
     }
 
@@ -144,10 +146,11 @@ impl App {
                         self.render(&mut tui, &action_tx)?;
                     },
                     Command::StartGame => {
-                        // WARNING: Testing
-                        self.should_quit = true;
+                        self.background_state.show_snowman = false;
+                        self.background_state.show_tree = false;
+                        self.set_active_page(1);
                     },
-                    _ => {}
+                    _ => {},
                 }
                 if !self.show_help {
                     if let Some(action) = self.get_active_page().update(action)? {
@@ -186,17 +189,22 @@ impl App {
                 .style(Style::default().bg(Color::Black));
             f.render_widget(border, area);
 
-            let drawable_area = area.inner(Margin { horizontal: 1, vertical: 1 });
+            let area = area.inner(Margin { horizontal: 1, vertical: 1 });
+
+            let background = Background::default();
+            f.render_stateful_widget(background, area, &mut self.background_state);
+
+            let area = self.background_state.get_empty_area(area);
 
             if let Some(page) = self.pages.get_mut(self.active_page_index) {
-                let r = page.draw(f, drawable_area);
+                let r = page.draw(f, area);
                 if let Err(e) = r {
                     action_tx.send(act!(Command::Error(format!("Failed to draw: {:?}", e)))).unwrap();
                 }
             }
 
             if self.show_help {
-                let r = self.draw_help(f, drawable_area);
+                let r = self.draw_help(f, area);
                 if let Err(e) = r {
                     action_tx.send(act!(Command::Error(format!("Failed to draw: {:?}", e)))).unwrap();
                 }

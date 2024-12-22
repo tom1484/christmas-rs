@@ -27,8 +27,8 @@ pub struct BackgroundState {
     width: usize,
     height: usize,
     current: usize,
-    show_snowman: bool,
-    show_tree: bool,
+    pub show_snowman: bool,
+    pub show_tree: bool,
 }
 
 impl BackgroundState {
@@ -41,19 +41,9 @@ impl BackgroundState {
             width: 0,
             height: 0,
             current: 0,
-            show_snowman: false,
-            show_tree: false,
+            show_snowman: true,
+            show_tree: true,
         }
-    }
-
-    pub fn show_snowman(mut self) -> Self {
-        self.show_snowman = true;
-        self
-    }
-
-    pub fn show_tree(mut self) -> Self {
-        self.show_tree = true;
-        self
     }
 
     fn get_delta_time(&mut self, now: SystemTime) -> f32 {
@@ -137,6 +127,12 @@ impl BackgroundState {
                     .collect::<String>()
             })
             .collect::<Vec<_>>()
+    }
+
+    pub fn get_empty_area(&self, mut area: Rect) -> Rect {
+        let height = self.height as u16;
+        area.height = height - height.min(background::GROUND_HEIGHT);
+        area
     }
 }
 

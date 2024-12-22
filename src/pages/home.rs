@@ -17,7 +17,7 @@ use crate::{
         multiline::MultiLine,
     },
     config::{key_event_to_string, PageKeyBindings},
-    constants::title::{TITLE_SHADOW, TITLE_TEXT},
+    constants::title
 };
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -30,7 +30,7 @@ pub struct HomePage {
     pub keymap: PageKeyBindings,
     options: Vec<(OptionItem, &'static str)>,
     selected_option_index: usize,
-    background_state: BackgroundState,
+    // background_state: BackgroundState,
 }
 
 impl HomePage {
@@ -40,7 +40,7 @@ impl HomePage {
             keymap: PageKeyBindings::default(),
             options: vec![(OptionItem::Start, "Start playing")],
             selected_option_index: 0,
-            background_state: BackgroundState::new(2.0, 1.0 / 30.0).show_tree().show_snowman(),
+            // background_state: BackgroundState::new(2.0, 1.0 / 30.0).show_tree().show_snowman(),
         }
     }
 
@@ -134,11 +134,11 @@ impl Page for HomePage {
 
     fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
         // Draw background
-        let background = Background::default();
-        f.render_stateful_widget(background, area, &mut self.background_state);
+        // let background = Background::default();
+        // f.render_stateful_widget(background, area, &mut self.background_state);
 
-        let title_lines: Vec<&str> = TITLE_TEXT.lines().filter(|s| s.len() != 0).collect();
-        let shadow_lines: Vec<&str> = TITLE_SHADOW.lines().filter(|s| s.len() != 0).collect();
+        let title_lines: Vec<&str> = title::TITLE_TEXT.lines().filter(|s| s.len() != 0).collect();
+        let shadow_lines: Vec<&str> = title::TITLE_SHADOW.lines().filter(|s| s.len() != 0).collect();
 
         let num_title_lines = title_lines.len().max(shadow_lines.len()) as u16;
 
