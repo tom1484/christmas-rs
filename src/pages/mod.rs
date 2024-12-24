@@ -4,8 +4,8 @@ use color_eyre::eyre::Result;
 use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::{layout::Rect, Frame};
 use serde::Deserialize;
-use tokio::sync::mpsc::UnboundedSender;
 use strum::Display;
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     action::Action,
@@ -13,6 +13,7 @@ use crate::{
     tui::Event,
 };
 
+pub mod card;
 pub mod game;
 pub mod home;
 

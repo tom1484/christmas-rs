@@ -10,8 +10,5 @@ use crate::action::ActionState;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Display, Deserialize)]
 pub enum GameAction {
-    Left,
-    Right,
-    Up,
-    Down,
+    Up
 }

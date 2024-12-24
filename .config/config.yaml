@@ -2,11 +2,11 @@ keybindings:
   global:
     click:
       <q>: Quit
-      # <s>: SwitchPage
       <?>: ToggleShowHelp
       <Ctrl-d>: Quit
       <Ctrl-c>: Quit
       <Ctrl-z>: Suspend
+    hold:
   pages:
     Home:
       click:
@@ -17,10 +17,7 @@ keybindings:
     Game:
       click:
       hold:
-        <h>: Left
-        <l>: Right
-        <k>: Up
-        <j>: Down
+        <Space>: Up
     Card:
       click:
         <Enter>: Next

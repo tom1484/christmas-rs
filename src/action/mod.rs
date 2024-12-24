@@ -53,6 +53,7 @@ pub enum Command {
     Help,
     ToggleShowHelp,
     StartGame,
+    ShowCard,
     // Page actions
     Home(HomeAction),
     Game(GameAction),

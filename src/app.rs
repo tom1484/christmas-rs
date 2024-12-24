@@ -18,8 +18,8 @@ use crate::{
         help::Help,
     },
     config::Config,
-    constants::{HEIGHT, WIDTH},
-    pages::{game::GamePage, home::HomePage, Page, PageId},
+    constants::{home, HEIGHT, WIDTH},
+    pages::{card::CardPage, game::GamePage, home::HomePage, Page, PageId},
     tui,
 };
 
@@ -48,6 +48,7 @@ impl App {
         let page_keybindings = &config.keybindings.pages;
         let home_page = HomePage::new();
         let game_page = GamePage::new();
+        let card_page = CardPage::new();
 
         Ok(Self {
             tick_rate,
@@ -56,9 +57,9 @@ impl App {
             should_suspend: false,
             show_help: false,
             config,
-            pages: vec![Box::new(home_page), Box::new(game_page)],
+            pages: vec![Box::new(home_page), Box::new(game_page), Box::new(card_page)],
             active_page_index: 0,
-            background_state: BackgroundState::new(2.0, 1.0 / 30.0),
+            background_state: BackgroundState::new(home::SNOWFLAKE_SPEED, home::SNOWFLAKE_DENSITY),
         })
     }
 
@@ -149,6 +150,9 @@ impl App {
                         self.background_state.show_snowman = false;
                         self.background_state.show_tree = false;
                         self.set_active_page(1);
+                    },
+                    Command::ShowCard => {
+                        self.set_active_page(2);
                     },
                     _ => {},
                 }

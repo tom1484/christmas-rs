@@ -46,7 +46,7 @@ impl BackgroundState {
         }
     }
 
-    fn get_delta_time(&mut self, now: SystemTime) -> f32 {
+    fn get_delta_time(&self, now: SystemTime) -> f32 {
         let dt = now.duration_since(self.last_time).unwrap().as_secs_f32();
         dt
     }
@@ -129,10 +129,10 @@ impl BackgroundState {
             .collect::<Vec<_>>()
     }
 
-    pub fn get_empty_area(&self, mut area: Rect) -> Rect {
-        let height = self.height as u16;
-        area.height = height - height.min(background::GROUND_HEIGHT);
-        area
+    pub fn get_empty_area(&self, area: Rect) -> Rect {
+        let height = area.height as u16;
+        let sky_height = height - background::GROUND_HEIGHT;
+        Rect { height: sky_height, ..area }
     }
 }
 

@@ -547,7 +547,7 @@ mod tests {
     #[test]
     fn test_config() -> Result<()> {
         let c = Config::new()?;
-        println!("{:?}", c.keybindings.pages.get(&PageId::Home));
+        println!("{:?}", c.keybindings.pages.get(&PageId::Game));
         // assert_eq!(
         //     c.keybindings.pages.get("Game").unwrap().0.get(&parse_key_event("<b>").unwrap()).unwrap(),
         //     &Action::Game(GameAction::Right)

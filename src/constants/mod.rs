@@ -1,3 +1,5 @@
+pub mod home;
+pub mod game;
 pub mod title;
 pub mod background;
 
