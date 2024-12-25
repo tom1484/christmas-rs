@@ -37,7 +37,7 @@ impl CardPage {
     }
 
     pub fn draw_card(&self, f: &mut Frame<'_>, area: Rect, lines: Vec<&str>) -> Result<()> {
-        let width = lines.iter().map(|s| s.len()).max().unwrap_or(0) as u16 + card::CARD_HPADDING * 2;
+        let width = lines.iter().map(|s| s.chars().count() * 2).max().unwrap_or(0) as u16 + card::CARD_HPADDING * 2;
         let height = lines.len() as u16 + card::CARD_VPADDING * 2;
 
         let lines = lines.into_iter().map(|s| Line::from(s)).collect::<Vec<_>>();

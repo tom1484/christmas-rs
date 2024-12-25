@@ -17,12 +17,14 @@ pub const CONGRAT_SHADOW: &str = "
 ";
 
 pub const CARD_TEXT: &str = "
-adsfvfdbfvdsfbd
-vfbdsfvdfbdg
-vsfbdavdfbdbfavd
-abfdsavbdbfvdvsafbd b
-sdfbasvdabfdsasdvbfd 
-absfdsdvsabfdssdvsab
+如果你看到這封信，表示...
+你已經破關了！希望你喜歡這個小遊戲：）
+本來想要做酷炫一點，但是太難了哈哈
+謝謝你讓我第一次有人一起過聖誕節，希望之後每一年都有你
+接下來一年一起加油申請上好學校！
+不要太常焦慮或自我懷疑，你可以在不同領域橫跳
+其實比很多人都厲害了，明年好好努力一定有成果！
+以上，Merry Christmas!!!
 ";
 
 pub const CARD_VPADDING: u16 = 2;
