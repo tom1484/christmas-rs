@@ -54,43 +54,69 @@ pub trait Object {
         (x, y)
     }
 
-    fn get_collision<T: Object>(&self, other: &T) -> CollisionType {
+    // fn get_collision<T: Object>(&self, other: &T) -> CollisionType {
+    //     let (self_width, self_height) = self.get_size();
+    //     let self_width = self_width as i16;
+    //     let self_height = self_height as i16;
+
+    //     let (self_left, self_bottom) = self.get_pos();
+    //     let self_left = self_left as i16;
+    //     let self_bottom = self_bottom as i16;
+
+    //     let (other_width, other_height) = other.get_size();
+    //     let other_width = other_width as i16;
+    //     let other_height = other_height as i16;
+
+    //     let (other_left, other_bottom) = other.get_pos();
+    //     let other_left = other_left as i16;
+    //     let other_bottom = other_bottom as i16;
+
+    //     let self_right = self_left + self_width - 1;
+    //     let self_top = self_bottom + self_height - 1;
+    //     let other_right = other_left + other_width - 1;
+    //     let other_top = other_bottom + other_height - 1;
+
+    //     if self_left == other_right && interval_sec(self_bottom, self_top, other_bottom, other_top) {
+    //         CollisionType::Left
+    //     } else if self_right == other_left && interval_sec(self_bottom, self_top, other_bottom, other_top) {
+    //         CollisionType::Right
+    //     } else if self_bottom == other_top && interval_sec(self_left, self_right, other_left, other_right) {
+    //         CollisionType::Bottom
+    //     } else if self_top == other_bottom && interval_sec(self_left, self_right, other_left, other_right) {
+    //         CollisionType::Top
+    //     } else {
+    //         CollisionType::None
+    //     }
+    // }
+
+    // fn collides_with<T: Object>(&self, other: &T) -> bool {
+    //     self.get_collision(other) != CollisionType::None
+    // }
+
+    fn collides_with<T: Object>(&self, other: &T) -> bool {
         let (self_width, self_height) = self.get_size();
         let self_width = self_width as i16;
         let self_height = self_height as i16;
 
-        let (self_x, self_y) = self.get_pos();
-        let self_x = self_x as i16;
-        let self_y = self_y as i16;
+        let (self_left, self_bottom) = self.get_pos();
+        let self_left = self_left as i16;
+        let self_bottom = self_bottom as i16;
 
         let (other_width, other_height) = other.get_size();
         let other_width = other_width as i16;
         let other_height = other_height as i16;
 
-        let (other_x, other_y) = other.get_pos();
-        let other_x = other_x as i16;
-        let other_y = other_y as i16;
+        let (other_left, other_bottom) = other.get_pos();
+        let other_left = other_left as i16;
+        let other_bottom = other_bottom as i16;
 
-        let self_right = self_x + self_width - 1;
-        let self_top = self_y + self_height - 1;
-        let other_right = other_x + other_width - 1;
-        let other_top = other_y + other_height - 1;
+        let self_right = self_left + self_width - 1;
+        let self_top = self_bottom + self_height - 1;
+        let other_right = other_left + other_width - 1;
+        let other_top = other_bottom + other_height - 1;
 
-        if self_x == other_right && interval_sec(self_y, self_top, other_y, other_top) {
-            CollisionType::Left
-        } else if self_right == other_x && interval_sec(self_y, self_top, other_y, other_top) {
-            CollisionType::Right
-        } else if self_y == other_top && interval_sec(self_x, self_right, other_x, other_right) {
-            CollisionType::Bottom
-        } else if self_top == other_y && interval_sec(self_x, self_right, other_x, other_right) {
-            CollisionType::Top
-        } else {
-            CollisionType::None
-        }
-    }
-
-    fn collides_with<T: Object>(&self, other: &T) -> bool {
-        self.get_collision(other) != CollisionType::None
+        interval_sec(self_bottom, self_top, other_bottom, other_top)
+            && interval_sec(self_left, self_right, other_left, other_right)
     }
 }
 

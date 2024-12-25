@@ -48,6 +48,7 @@ pub struct GamePage {
     next_height: u16,
     next_margin: u16,
     generated: u16,
+    paused: bool,
 }
 
 impl GamePage {
@@ -67,6 +68,7 @@ impl GamePage {
             next_height: 0,
             next_margin: 0,
             generated: 0,
+            paused: false,
         }
     }
 
@@ -175,9 +177,11 @@ impl GamePage {
         let lower_stirng = self.generate_pipe_string(pipe_width, lower_pipe_height, true);
         let upper_stirng = self.generate_pipe_string(pipe_width, upper_pipe_height, false);
 
-        let lower_pipe = Boundary::new(vec![lower_stirng.as_str()], vec![game::PIPE_COLOR], pipe_x, 0);
-        let upper_pipe =
-            Boundary::new(vec![upper_stirng.as_str()], vec![game::PIPE_COLOR], pipe_x, upper_pipe_y as i16);
+        let colors =
+            if self.generated == game::MAX_PIPE_NUM - 1 { vec![game::LAST_PIPE_COLOR] } else { vec![game::PIPE_COLOR] };
+
+        let lower_pipe = Boundary::new(vec![lower_stirng.as_str()], colors.clone(), pipe_x, 0);
+        let upper_pipe = Boundary::new(vec![upper_stirng.as_str()], colors, pipe_x, upper_pipe_y as i16);
 
         self.pipes.push_back((lower_pipe, upper_pipe));
         self.generated += 1;
@@ -259,28 +263,30 @@ impl Page for GamePage {
         match self.state {
             State::Idle => {},
             State::Ready => {
-                self.bird.update(game::GRAVITY);
-                self.update_pipes();
+                if !self.paused {
+                    self.bird.update(game::GRAVITY);
+                    self.update_pipes();
 
-                if self.pipes.len() == 0 && self.generated >= game::MAX_PIPE_NUM {
-                    if let Some(action_tx) = &self.action_tx {
-                        action_tx.send(act!(Command::ShowCard))?;
+                    if self.pipes.len() == 0 && self.generated >= game::MAX_PIPE_NUM {
+                        if let Some(action_tx) = &self.action_tx {
+                            action_tx.send(act!(Command::ShowCard))?;
+                        }
                     }
-                }
 
-                let mut game_over = false;
-                if self.bird.collides_with(&self.boundaries[0]) || self.bird.collides_with(&self.boundaries[1]) {
-                    game_over = true;
-                }
-                for (lower_pipe, upper_pipe) in self.pipes.iter() {
-                    if self.bird.collides_with(lower_pipe) || self.bird.collides_with(upper_pipe) {
+                    let mut game_over = false;
+                    if self.bird.collides_with(&self.boundaries[0]) || self.bird.collides_with(&self.boundaries[1]) {
                         game_over = true;
-                        break;
                     }
-                }
+                    for (lower_pipe, upper_pipe) in self.pipes.iter() {
+                        if self.bird.collides_with(lower_pipe) || self.bird.collides_with(upper_pipe) {
+                            game_over = true;
+                            break;
+                        }
+                    }
 
-                if game_over {
-                    self.reset();
+                    if game_over {
+                        self.reset();
+                    }
                 }
             },
             State::Dead => {},
@@ -301,6 +307,15 @@ impl Page for GamePage {
         self.draw_pipes(f, area);
 
         Ok(())
+    }
+
+    fn pause(&mut self) {
+        self.paused = true;
+    }
+
+    fn resume(&mut self) {
+        self.bird.resume();
+        self.paused = false;
     }
 }
 

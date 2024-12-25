@@ -15,6 +15,7 @@ pub struct Bird {
     velocity: f32,
     velocity_limit: f32,
     last_time: SystemTime,
+    paused: bool,
 }
 
 impl Bird {
@@ -37,6 +38,7 @@ impl Bird {
             velocity: 0.0,
             velocity_limit,
             last_time: SystemTime::now(),
+            paused: false,
         }
     }
 
@@ -50,23 +52,34 @@ impl Bird {
     }
 
     pub fn update(&mut self, gravity: f32) {
-        let now = SystemTime::now();
-        let dt = self.get_delta_time(now);
-        self.last_time = now;
+        if !self.paused {
+            let now = SystemTime::now();
+            let dt = self.get_delta_time(now);
+            self.last_time = now;
 
-        self.velocity -= gravity * dt;
-        if self.velocity > self.velocity_limit {
-            self.velocity = self.velocity_limit;
-        }
-        if self.velocity < -self.velocity_limit {
-            self.velocity = -self.velocity_limit;
-        }
+            self.velocity -= gravity * dt;
+            if self.velocity > self.velocity_limit {
+                self.velocity = self.velocity_limit;
+            }
+            if self.velocity < -self.velocity_limit {
+                self.velocity = -self.velocity_limit;
+            }
 
-        self.y += self.velocity * dt;
+            self.y += self.velocity * dt;
+        }
     }
 
     pub fn up(&mut self, velocity: f32) {
         self.velocity = velocity.min(self.velocity_limit);
+    }
+
+    pub fn pause(&mut self) {
+        self.paused = true;
+    }
+
+    pub fn resume(&mut self) {
+        self.reset_time();
+        self.paused = false;
     }
 }
 

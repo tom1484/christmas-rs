@@ -138,7 +138,14 @@ impl App {
                     Command::Quit => self.should_quit = true,
                     Command::Suspend => self.should_suspend = true,
                     Command::Resume => self.should_suspend = false,
-                    Command::ToggleShowHelp => self.show_help = !self.show_help,
+                    Command::ToggleShowHelp => {
+                        if self.show_help {
+                            self.get_active_page().resume();
+                        } else {
+                            self.get_active_page().pause();
+                        }
+                        self.show_help = !self.show_help;
+                    },
                     Command::Resize(w, h) => {
                         tui.resize(Rect::new(0, 0, *w, *h))?;
                         self.render(&mut tui, &action_tx)?;

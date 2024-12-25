@@ -22,8 +22,11 @@ impl Boundary {
             .collect();
 
         let height = layers.iter().map(|layer| layer.len()).max().unwrap_or(0) as u16;
-        let width =
-            layers.iter().map(|layer| layer.iter().map(|line| line.len()).max().unwrap_or(0)).max().unwrap_or(0) as u16;
+        let width = layers
+            .iter()
+            .map(|layer| layer.iter().map(|line| line.chars().count()).max().unwrap_or(0))
+            .max()
+            .unwrap_or(0) as u16;
         Boundary { width, height, x: x as f32, y: y as f32, layers, colors }
     }
 
@@ -45,7 +48,6 @@ impl Object for Boundary {
         self.x = x as f32;
         self.y = y as f32;
     }
-
 
     fn get_layers(&self) -> Vec<Vec<String>> {
         self.layers.clone()

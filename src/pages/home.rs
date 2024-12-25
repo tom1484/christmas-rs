@@ -17,7 +17,7 @@ use crate::{
         multiline::MultiLine,
     },
     config::{key_event_to_string, PageKeyBindings},
-    constants::title
+    constants::title,
 };
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -172,5 +172,11 @@ impl Page for HomePage {
         self.draw_options(f, option_area)?;
 
         Ok(())
+    }
+
+    fn pause(&mut self) {
+    }
+
+    fn resume(&mut self) {
     }
 }

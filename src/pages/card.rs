@@ -17,79 +17,39 @@ use crate::{
         multiline::MultiLine,
     },
     config::{key_event_to_string, PageKeyBindings},
-    constants::title
+    constants::{card, title},
 };
-
-#[derive(Copy, Clone, PartialEq, Eq)]
-enum OptionItem {
-    Start,
-}
 
 pub struct CardPage {
     pub action_tx: Option<UnboundedSender<Action>>,
     pub keymap: PageKeyBindings,
-    options: Vec<(OptionItem, &'static str)>,
-    selected_option_index: usize,
-    // background_state: BackgroundState,
 }
 
 impl CardPage {
     pub fn new() -> Self {
-        CardPage {
-            action_tx: None,
-            keymap: PageKeyBindings::default(),
-            options: vec![(OptionItem::Start, "Start playing")],
-            selected_option_index: 0,
-            // background_state: BackgroundState::new(2.0, 1.0 / 30.0).show_tree().show_snowman(),
-        }
+        CardPage { action_tx: None, keymap: PageKeyBindings::default() }
     }
 
     pub fn up(&mut self) {
-        if self.selected_option_index < self.options.len() - 1 {
-            self.selected_option_index += 1;
-        }
     }
 
     pub fn down(&mut self) {
-        if self.selected_option_index > 0 {
-            self.selected_option_index -= 1;
-        }
     }
 
-    fn draw_options(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
-        // Draw options
-        let option_titles = self.options.iter().map(|(_, title)| *title).collect::<Vec<_>>();
-        let max_option_len = option_titles.iter().map(|title| title.len()).max().unwrap_or(0) as u16;
-        let num_option_titles = option_titles.len();
+    pub fn draw_card(&self, f: &mut Frame<'_>, area: Rect, lines: Vec<&str>) -> Result<()> {
+        let width = lines.iter().map(|s| s.len()).max().unwrap_or(0) as u16 + card::CARD_HPADDING * 2;
+        let height = lines.len() as u16 + card::CARD_VPADDING * 2;
 
-        let option_titles = option_titles
-            .into_iter()
-            .map(|title| {
-                let title = title.to_string();
-                let pad_len = max_option_len as usize - title.len();
-                let front_pad = vec![' '; 2].into_iter().collect::<String>();
-                let back_pad = vec![' '; pad_len + 2].into_iter().collect::<String>();
-                [front_pad, title, back_pad].into_iter().collect::<String>()
-            })
-            .collect::<Vec<_>>();
+        let lines = lines.into_iter().map(|s| Line::from(s)).collect::<Vec<_>>();
+        let [_, area, _] =
+            Layout::horizontal(vec![Constraint::Fill(1), Constraint::Length(width), Constraint::Fill(1)]).areas(area);
+        let block = Block::default().borders(Borders::ALL).border_type(BorderType::Rounded);
+        f.render_widget(block, area);
 
-        let [option_area] = Layout::horizontal(vec![Constraint::Length(max_option_len + (2 * 2))])
-            .flex(layout::Flex::SpaceAround)
-            .areas(area);
+        let area = area.inner(Margin { horizontal: card::CARD_HPADDING, vertical: card::CARD_VPADDING });
 
-        let lines = MultiLine::new(option_titles).line_padding(1).line_styles(
-            (0..num_option_titles)
-                .into_iter()
-                .map(|index| {
-                    let selected = index == self.selected_option_index;
-                    match selected {
-                        true => Style::default().fg(Color::Black).bg(Color::Blue),
-                        false => Style::default().fg(Color::White).bg(Color::DarkGray),
-                    }
-                })
-                .collect(),
-        );
-        f.render_widget(lines, option_area);
+        let paragraph = Paragraph::new(lines).alignment(Alignment::Center);
+        f.render_widget(paragraph, area);
 
         Ok(())
     }
@@ -133,20 +93,17 @@ impl Page for CardPage {
     }
 
     fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
-        // Draw background
-        // let background = Background::default();
-        // f.render_stateful_widget(background, area, &mut self.background_state);
-
-        let title_lines: Vec<&str> = title::TITLE_TEXT.lines().filter(|s| s.len() != 0).collect();
-        let shadow_lines: Vec<&str> = title::TITLE_SHADOW.lines().filter(|s| s.len() != 0).collect();
-
+        let title_lines: Vec<&str> = card::CONGRAT_TEXT.lines().filter(|s| s.len() != 0).collect();
+        let shadow_lines: Vec<&str> = card::CONGRAT_SHADOW.lines().filter(|s| s.len() != 0).collect();
         let num_title_lines = title_lines.len().max(shadow_lines.len()) as u16;
 
-        let num_options = self.options.len() as u16;
-        let option_height = num_options * 2 - 1;
+        // let num_options = self.options.len() as u16;
+        // let option_height = num_options * 2 - 1;
+        let card_lines: Vec<&str> = card::CARD_TEXT.lines().filter(|s| s.len() != 0).collect();
+        let num_card_lines = card_lines.len().max(shadow_lines.len()) as u16 + card::CARD_VPADDING * 2;
 
-        let [title_area, option_area] =
-            Layout::vertical(vec![Constraint::Length(num_title_lines), Constraint::Length(option_height)])
+        let [title_area, card_area] =
+            Layout::vertical(vec![Constraint::Length(num_title_lines), Constraint::Length(num_card_lines)])
                 .flex(layout::Flex::SpaceAround)
                 .areas(area);
 
@@ -168,9 +125,15 @@ impl Page for CardPage {
             MultiLine::new(title_lines).ignore_whitespace(true).pixel_mode().style(Style::default().fg(Color::Red));
         f.render_widget(title_lines, title_area);
 
-        // Draw options
-        self.draw_options(f, option_area)?;
+        // Draw card
+        self.draw_card(f, card_area, card_lines)?;
 
         Ok(())
+    }
+
+    fn pause(&mut self) {
+    }
+
+    fn resume(&mut self) {
     }
 }

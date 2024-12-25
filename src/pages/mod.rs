@@ -64,4 +64,7 @@ pub trait Page {
         Ok(None)
     }
     fn draw(&mut self, f: &mut Frame<'_>, rect: Rect) -> Result<()>;
+
+    fn pause(&mut self);
+    fn resume(&mut self);
 }
