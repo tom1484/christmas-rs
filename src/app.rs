@@ -159,6 +159,8 @@ impl App {
                         self.set_active_page(1);
                     },
                     Command::ShowCard => {
+                        self.background_state.show_snowman = true;
+                        self.background_state.show_tree = true;
                         self.set_active_page(2);
                     },
                     _ => {},
